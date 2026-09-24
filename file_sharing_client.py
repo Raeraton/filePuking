@@ -14,6 +14,9 @@ if packet_size == "": packet_size = 256
 else: packet_size = int(packet_size)
 range_size = int( input("enter range size: ") )
 
+elfogyott_to = 0.1
+if packet_size >= 2: elfogyott_to = float( input("to ~(0.01-1): ") )
+
 
 
 
@@ -135,7 +138,7 @@ else:
             server_addr
             )
 
-        sock.settimeout(0.1) # TODO talalj ki valamit
+        sock.settimeout(elfogyott_to) # TODO talalj ki valamit
         packet_left = range_size
 
         recved_packet_idxs = set()
