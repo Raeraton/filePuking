@@ -143,13 +143,16 @@ else:
 
         recved_packet_idxs = set()
 
-        while packet_left > 0:
+        while len( recved_packet_idxs ) < range_size:
             try:
                 
                 data, addr = sock.recvfrom( packet_size + 32 )
                 if addr != server_addr: continue
 
                 packet_idx = int.from_bytes( data[:4], "big", signed=False )
+
+                if packet_idx in recved_packet_idxs: continue
+
                 packet_cont = data[4:]
                 packet_left -= 1
                 packet_recved += 1
@@ -161,11 +164,24 @@ else:
                 file.set_bytes( packet_cont, packet_idx*packet_size )
 
             except TimeoutError:
-                for index in range(range_start, range_end):
-                    if index not in recved_packet_idxs:
-                        recv_idx(index, False)
-                        packet_left -= 1
-                break
+                idx_count = (packet_size-2) // 4
+                idx_to_request = []
+                for idx in range( range_start, range_end ):
+                    if idx not in recved_packet_idxs:
+                        idx_to_request.append(idx)
+                        if len(idx_to_request) >= idx_count:
+                            break
+
+                to_send = bytearray()
+                to_send.extend( len(idx_to_request).to_bytes(2,"big", signed=False) )
+
+                for idx in idx_to_request:
+                    to_send.extend(idx.to_bytes(4,"big",signed=False))
+
+                sock.sendto( b"IDS" + to_send, server_addr )
+
+                if len(idx_to_request) == 0: break
+               
 print( f"completed or failed in {time.time()-time_point} sec" )
 
 

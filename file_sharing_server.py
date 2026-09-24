@@ -48,14 +48,46 @@ sock.settimeout( 10 )
 while 1:
     try:
     
-        rcvd, addr = sock.recvfrom( 256 )
+        rcvd, addr = sock.recvfrom( packet_size + 128 )
         if addr != target_addr:
             continue
 
         request = rcvd[:3]
         args = rcvd[3:]
 
-        if request == b"RNG":
+
+        if request == b"IDX":
+
+            idxb = args[:4]
+            idx = int.from_bytes(idxb,"big",signed=False)
+
+            
+            print( "idx", idx )
+            
+            sock.sendto( idxb + file.get_bytes( packet_size*idx, packet_size*(idx+1) ), target_addr )
+
+        elif request == b"IDS":
+
+            idx_count = int.from_bytes( args[:2],"big",signed=False )
+
+            idxs = []
+            for i in range(idx_count):
+                byte_idx = 2 + i*4
+                idxs.append(
+                    int.from_bytes( args[byte_idx:byte_idx+4], "big", signed=False )
+                )
+
+            print( "ids", idxs )
+
+            for idx in idxs:
+                sock.sendto(
+                    idx.to_bytes(4, "big", signed=False) +
+                    file.get_bytes( idx*packet_size, (idx+1)*packet_size ),
+                    target_addr
+                )
+
+        
+        elif request == b"RNG":
 
             start = int.from_bytes( args[:4], "big", signed=False )
             end = int.from_bytes( args[4:8], "big", signed=False )
@@ -67,17 +99,7 @@ while 1:
                     i.to_bytes(4,"big",signed=False) + file.get_bytes( i*packet_size, (i+1)*packet_size ),
                     target_addr
                 )
-            
-        elif request == b"IDX":
-
-            idxb = args[:4]
-            idx = int.from_bytes(idxb,"big",signed=False)
-
-            
-            print( "idx", idx )
-            
-            sock.sendto( idxb + file.get_bytes( packet_size*idx, packet_size*(idx+1) ), target_addr )
-            
+          
         elif request == b"LEN":
 
             print( "len" )
